@@ -139,6 +139,28 @@ def forecast(model, df, timesteps, multisteps, scaler):
         inp = inp[-timesteps:]
     return forecasts
 
+def forecast_2(model, df, timesteps, multisteps, scaler):
+
+    train_idx, val_idx = split_data(df)
+
+    forecasts = []
+
+    for  i in range(val_idx, len(df), timesteps):
+        input_seq = df[(i - timesteps):i].values #getting the last sequence of known value
+        inp = input_seq
+        #multisteps tells us how many iterations we want to perform, i.e., how many days we want to predict
+        for step in range(multisteps):
+            inp = inp.reshape(1, timesteps, univariate) # (1 sequence, n timesteps, 1 variable)
+            #the next six lines are for you to implement :)
+            pred = model.predict(inp)
+            pred_inverse_scale = scaler.inverse_transform(pred)
+            forecasts.append(pred_inverse_scale[0][0])
+            inp = np.append(inp[0], pred)
+            inp = inp[-timesteps:]       
+
+    return forecasts
+
+
 
 def plot_forecast(data, forecasts):
     #print("valor",forecasts)
@@ -199,5 +221,5 @@ model.compile(loss = rmse, optimizer = tf.keras.optimizers.Adam(), metrics = ['m
 model.fit(X, y, epochs=epochs, batch_size=batch_size, shuffle=False)
 
 #Recursive Multi-Step Forecast!!!
-forecasts = forecast(model, df, timesteps, multisteps, scaler)
+forecasts = forecast_2(model, df, timesteps, multisteps, scaler)
 plot_forecast(df_data, forecasts)
