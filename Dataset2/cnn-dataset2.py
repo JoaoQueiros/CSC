@@ -24,8 +24,9 @@ def split_data(training, perc=10):
 
 
 def prepare_data(df):
-    df_aux = df.drop(columns=['dt','LandAverageTemperatureUncertainty', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
-    #df_aux = df.drop(columns=['dt'], inplace=False)
+    #df_aux = df.drop(columns=['dt','LandAverageTemperatureUncertainty', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
+    df_aux = df.drop(columns=['dt','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
+    #df_aux = df.drop(columns=['dt', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
     #number of confirmed cases per day
     df_aux.dropna(inplace=True)
     return df_aux
@@ -160,6 +161,31 @@ def forecast(model, df, timesteps, multisteps, scaler):
     return forecasts
 
 
+def forecast_2(model, df, timesteps, multisteps, scaler):
+
+    train_idx, val_idx = split_data(df)
+
+    forecasts = []
+    
+    for  i in range(1850, len(df), 1):
+    
+        input_seq = df[(i - timesteps):i].values #getting the last sequence of known value
+        inp = input_seq
+        #multisteps tells us how many iterations we want to perform, i.e., how many days we want to predict
+        for step in range(multisteps):
+            inp = inp.reshape(1, timesteps, univariate) # (1 sequence, n timesteps, 1 variable)
+            #the next six lines are for you to implement :)
+            pred = model.predict(inp)
+            pred_inverse_scale = scaler.inverse_transform(pred)
+            forecasts.append(pred_inverse_scale[0][0])
+            inp = np.append(inp[0], pred)
+            inp = inp[-timesteps:]       
+
+    return forecasts
+
+
+
+
 def plot_forecast(data, forecasts):
 
     newdata = data['LandAverageTemperature'].iloc[3000:len(data)]
@@ -174,12 +200,28 @@ def plot_forecast(data, forecasts):
     plt.show()
     
     
+
+
+
+def plot_forecast_2(data, forecasts):
+    newdata = data['LandAverageTemperature'].iloc[1850:len(data)]
+    print(len(newdata))
+    plt.figure(figsize=(8, 6))
+    plt.plot(range(len(newdata)), newdata, color='green', label='Confirmed')
+    plt.plot(range(len(forecasts)), forecasts, label='Forecasts')
+    plt.title('Temperatura')
+    plt.ylabel('Graus')
+    plt.xlabel('Meses')
+    plt.legend()
+    plt.show()
+
+
     
     
 
 timesteps = 12 #number of days that make up a sequence
-univariate = 1 #number of features used by the model (using conf. cases to predict conf. cases)
-multisteps = 12 #number of days to forecast – we will forecast the next 5 days
+univariate = 6 #number of features used by the model (using conf. cases to predict conf. cases)
+multisteps = 1 #number of days to forecast – we will forecast the next 5 days
 cv_splits = 3 #time series cross validator
 epochs = 25
 batch_size = 12 #7 sequences of 5 days - which corresponds to a window of 7 days in a batch
@@ -202,8 +244,11 @@ model = build_model(timesteps, univariate)
 model.compile(loss = rmse, optimizer = tf.keras.optimizers.Adam(), metrics = ['mae', rmse])
 model.fit(X, y, epochs=epochs, batch_size=batch_size, shuffle=False)
 #Recursive Multi-Step Forecast!!!
-forecasts = forecast(model, df, timesteps, multisteps, scaler)
-plot_forecast(df_data, forecasts)
+#forecasts = forecast(model, df, timesteps, multisteps, scaler)
+#plot_forecast(df_data, forecasts)
+
+forecasts = forecast_2(model, df, timesteps, multisteps, scaler)
+plot_forecast_2(df_data,forecasts)
 
     
     
