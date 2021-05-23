@@ -81,7 +81,6 @@ rng = rng.iloc[19:-1,:]
 """
 df_pre = rng.merge(df_pre, how='left').fillna(0)
 
-
 """
 *********************************************************************
 8) write dataset

@@ -200,6 +200,8 @@ def lstm_model_training_function(dataset, test_data, checkpoint_path, save_file,
     # Vizualize Results 
     vizualize(predicted, real_Data)
     
+#train: 
+    
 #lstm_model_training_function(dataset, test_data, checkpoint_path, save_file, obs, middle_layers, neurons, f_activation, amnesia, optm, loss_funct, epochs, batch_size)
     
 
