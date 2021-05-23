@@ -23,7 +23,8 @@ def split_data(training, perc=10):
 
 #Preaparing the data for the LSTM
 def prepare_data(df):
-    df_aux = df.drop(columns=['dt','LandAverageTemperatureUncertainty', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
+    #df_aux = df.drop(columns=['dt','LandAverageTemperatureUncertainty', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
+    df_aux = df.drop(columns=['dt'], inplace=False)
     #number of confirmed cases per day
     df_aux.dropna(inplace=True)
     return df_aux
@@ -67,11 +68,9 @@ def rmse(y_true, y_pred):
 
 def build_model(timesteps, features, h_neurons=64, activation='tanh'):
     model = tf.keras.models.Sequential()
-
     model.add(tf.keras.layers.LSTM(h_neurons, input_shape=(timesteps, features)))
     model.add(tf.keras.layers.Dense(h_neurons, activation=activation))
-    model.add(tf.keras.layers.Dense(1, activation='relu'))
-
+    model.add(tf.keras.layers.Dense(1, activation='linear'))
     #model summary (and save it as PNG)
     tf.keras.utils.plot_model(model, 'covid19_model.png', show_shapes=True)
     return model
@@ -131,7 +130,7 @@ def forecast(model, df, timesteps, multisteps, scaler):
     forecasts = []
     #multisteps tells us how many iterations we want to perform, i.e., how many days we want to predict
     for step in range(multisteps):
-        inp = inp.reshape(1, timesteps, 1) # (1 sequence, n timesteps, 1 variable)
+        inp = inp.reshape(1, timesteps, univariate) # (1 sequence, n timesteps, 1 variable)
         #the next six lines are for you to implement :)
         pred = model.predict(inp)
         pred_inverse_scale = scaler.inverse_transform(pred)
@@ -142,22 +141,38 @@ def forecast(model, df, timesteps, multisteps, scaler):
 
 
 def plot_forecast(data, forecasts):
-    newdata = data.iloc[3000:len(data)]
+    #print("valor",forecasts)
+    newdata = data['LandAverageTemperature'].iloc[1850:len(data)]
     plt.figure(figsize=(8, 6))
     plt.plot(range(len(newdata)), newdata, color='green', label='Confirmed')
-    plt.plot(range(len(newdata) - 1, len(newdata) + len(forecasts) - 1), forecasts, color='red', label='Forecasts')
+    plt.scatter(range(len(newdata) - 1, len(newdata) + len(forecasts) - 1), forecasts, label='Forecasts')
     plt.title('Temperatura')
     plt.ylabel('Graus')
     plt.xlabel('Meses')
     plt.legend()
     plt.show()
 
+
+def vizualize(predicted, real_Data):
+    plt.plot(real_Data, color = 'red', label = 'Real values')
+    plt.plot(predicted, color = 'green', label = 'predicted')
+    plt.title('Number of Incidents')
+    plt.xlabel('Time')
+    plt.ylabel('Number of incidents')
+    plt.legend()
+    plt.show()
+
+
+
+
+
+
 #Main Execution
 timesteps = 12 #number of days that make up a sequence
-univariate = 1 #number of features used by the model (using conf. cases to predict conf. cases)
-multisteps = 24 #number of days to forecast – we will forecast the next 5 days
+univariate = 8 #number of features used by the model (using conf. cases to predict conf. cases)
+multisteps = 1 #number of days to forecast – we will forecast the next 5 days
 cv_splits = 3 #time series cross validator
-epochs = 50
+epochs = 25
 batch_size = 12 #7 sequences of 5 days - which corresponds to a window of 7 days in a batch
 
 #the dataframes

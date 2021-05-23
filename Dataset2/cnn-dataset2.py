@@ -24,7 +24,8 @@ def split_data(training, perc=10):
 
 
 def prepare_data(df):
-    df_aux = df.drop(columns=['dt','LandAverageTemperatureUncertainty', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
+    #df_aux = df.drop(columns=['dt','LandAverageTemperatureUncertainty', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
+    df_aux = df.drop(columns=['dt'], inplace=False)
     #number of confirmed cases per day
     df_aux.dropna(inplace=True)
     return df_aux
@@ -88,7 +89,33 @@ def build_model(timesteps, features, filters=16, kernel_size=5, pool_size=2):
     cnnModel = tf.keras.Model(inputs=inputs, outputs=outputs, name='cnn_model')
     tf.keras.utils.plot_model(cnnModel, 'covid19_cnnmodel.png', show_shapes=True)
     return cnnModel
-    
+  
+
+
+def plot_learning_curves(history, epochs):
+    #accuracies and losses
+    acc = history.history['LandAverageTemperature']
+    val_acc = history.history['val_accuracy']
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+    epochs_range = range(epochs)
+    #creating figure
+    plt.figure(figsize=(8, 8))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs_range, acc, label='Training Accuracy')
+    plt.plot(epochs_range, val_acc, label='Validation Accuracy')
+    plt.legend(loc='lower right')
+    plt.title('Training/Validation Accuracy')
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs_range, loss, label='Training Loss')
+    plt.plot(epochs_range, val_loss, label='Validation Loss')
+    plt.legend(loc='upper right')
+    plt.title('Training/Validation Loss')
+    plt.show()
+
+
+
+  
     
     
 def compile_and_fit(model, epochs, batch_size):
@@ -110,8 +137,8 @@ def compile_and_fit(model, epochs, batch_size):
         metrics = model.evaluate(X_test, y_test)
         hist_list.append(history)
         loss_list.append(metrics[2])
-        #plot_learning_curves(hist_list, approach='history')
-        #plot_learning_curves(loss_list, approach='loss')
+        #plot_learning_curves(history,epochs)
+        #plot_learning_curves(loss_list, epochs)
         return model, hist_list, loss_list
 
 
@@ -119,12 +146,11 @@ def compile_and_fit(model, epochs, batch_size):
 #Recursive Multi-Step Forecast!!!
 def forecast(model, df, timesteps, multisteps, scaler):
     input_seq = df[-timesteps:].values #getting the last sequence of known value
-    print(input_seq)
     inp = input_seq
     forecasts = []
     #multisteps tells us how many iterations we want to perform, i.e., how many days we want to predict
     for step in range(multisteps):
-        inp = inp.reshape(1, timesteps, 1) # (1 sequence, n timesteps, 1 variable)
+        inp = inp.reshape(1, timesteps, univariate) # (1 sequence, n timesteps, 1 variable)
         #the next six lines are for you to implement :)
         pred = model.predict(inp)
         pred_inverse_scale = scaler.inverse_transform(pred)
@@ -135,10 +161,12 @@ def forecast(model, df, timesteps, multisteps, scaler):
 
 
 def plot_forecast(data, forecasts):
-    newdata = data.iloc[3000:len(data)]
+
+    newdata = data['LandAverageTemperature'].iloc[1850:len(data)]
+   
     plt.figure(figsize=(8, 6))
     plt.plot(range(len(newdata)), newdata, color='green', label='Confirmed')
-    plt.plot(range(len(newdata) - 1, len(newdata) + len(forecasts) - 1), forecasts, color='red', label='Forecasts')
+    plt.scatter(range(len(newdata) - 1, len(newdata) + len(forecasts) - 1), forecasts, color='red', label='Forecasts')
     plt.title('Temperatura')
     plt.ylabel('Graus')
     plt.xlabel('Meses')
@@ -146,12 +174,14 @@ def plot_forecast(data, forecasts):
     plt.show()
     
     
+    
+    
 
 timesteps = 12 #number of days that make up a sequence
-univariate = 1 #number of features used by the model (using conf. cases to predict conf. cases)
-multisteps = 24 #number of days to forecast – we will forecast the next 5 days
+univariate = 8 #number of features used by the model (using conf. cases to predict conf. cases)
+multisteps = 1 #number of days to forecast – we will forecast the next 5 days
 cv_splits = 3 #time series cross validator
-epochs = 10
+epochs = 25
 batch_size = 12 #7 sequences of 5 days - which corresponds to a window of 7 days in a batch
 #the dataframes
 df_raw = load_dataset()
@@ -174,7 +204,7 @@ model.fit(X, y, epochs=epochs, batch_size=batch_size, shuffle=False)
 #Recursive Multi-Step Forecast!!!
 forecasts = forecast(model, df, timesteps, multisteps, scaler)
 plot_forecast(df_data, forecasts)
-    
+
     
     
     
