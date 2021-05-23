@@ -23,8 +23,8 @@ def split_data(training, perc=10):
 
 #Preaparing the data for the LSTM
 def prepare_data(df):
-    #df_aux = df.drop(columns=['dt','LandAverageTemperatureUncertainty', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
-    df_aux = df.drop(columns=['dt'], inplace=False)
+    df_aux = df.drop(columns=['dt','LandAverageTemperatureUncertainty', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
+    #df_aux = df.drop(columns=['dt'], inplace=False)
     #number of confirmed cases per day
     df_aux.dropna(inplace=True)
     return df_aux
@@ -72,7 +72,7 @@ def build_model(timesteps, features, h_neurons=64, activation='tanh'):
     model.add(tf.keras.layers.Dense(h_neurons, activation=activation))
     model.add(tf.keras.layers.Dense(1, activation='linear'))
     #model summary (and save it as PNG)
-    tf.keras.utils.plot_model(model, 'covid19_model.png', show_shapes=True)
+    tf.keras.utils.plot_model(model, 'temperaturTerra.png', show_shapes=True)
     return model
 
 #Vizualizing Learning Curves
@@ -142,10 +142,10 @@ def forecast(model, df, timesteps, multisteps, scaler):
 
 def plot_forecast(data, forecasts):
     #print("valor",forecasts)
-    newdata = data['LandAverageTemperature'].iloc[1850:len(data)]
+    newdata = data['LandAverageTemperature'].iloc[3000:len(data)]
     plt.figure(figsize=(8, 6))
     plt.plot(range(len(newdata)), newdata, color='green', label='Confirmed')
-    plt.scatter(range(len(newdata) - 1, len(newdata) + len(forecasts) - 1), forecasts, label='Forecasts')
+    plt.plot(range(len(newdata) - 1, len(newdata) + len(forecasts) - 1), forecasts, label='Forecasts')
     plt.title('Temperatura')
     plt.ylabel('Graus')
     plt.xlabel('Meses')
@@ -169,8 +169,8 @@ def vizualize(predicted, real_Data):
 
 #Main Execution
 timesteps = 12 #number of days that make up a sequence
-univariate = 8 #number of features used by the model (using conf. cases to predict conf. cases)
-multisteps = 1 #number of days to forecast – we will forecast the next 5 days
+univariate = 1 #number of features used by the model (using conf. cases to predict conf. cases)
+multisteps = 12 #number of days to forecast – we will forecast the next 5 days
 cv_splits = 3 #time series cross validator
 epochs = 25
 batch_size = 12 #7 sequences of 5 days - which corresponds to a window of 7 days in a batch

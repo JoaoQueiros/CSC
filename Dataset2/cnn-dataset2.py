@@ -24,8 +24,8 @@ def split_data(training, perc=10):
 
 
 def prepare_data(df):
-    #df_aux = df.drop(columns=['dt','LandAverageTemperatureUncertainty', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
-    df_aux = df.drop(columns=['dt'], inplace=False)
+    df_aux = df.drop(columns=['dt','LandAverageTemperatureUncertainty', 'LandMaxTemperature', 'LandMaxTemperatureUncertainty', 'LandMinTemperature','LandMinTemperatureUncertainty','LandAndOceanAverageTemperature','LandAndOceanAverageTemperatureUncertainty'], inplace=False)
+    #df_aux = df.drop(columns=['dt'], inplace=False)
     #number of confirmed cases per day
     df_aux.dropna(inplace=True)
     return df_aux
@@ -87,7 +87,7 @@ def build_model(timesteps, features, filters=16, kernel_size=5, pool_size=2):
     outputs = tf.keras.layers.Dense(1)(x)
     #the model
     cnnModel = tf.keras.Model(inputs=inputs, outputs=outputs, name='cnn_model')
-    tf.keras.utils.plot_model(cnnModel, 'covid19_cnnmodel.png', show_shapes=True)
+    tf.keras.utils.plot_model(cnnModel, 'temperaturas_cnnmodel.png', show_shapes=True)
     return cnnModel
   
 
@@ -162,11 +162,11 @@ def forecast(model, df, timesteps, multisteps, scaler):
 
 def plot_forecast(data, forecasts):
 
-    newdata = data['LandAverageTemperature'].iloc[1850:len(data)]
+    newdata = data['LandAverageTemperature'].iloc[3000:len(data)]
    
     plt.figure(figsize=(8, 6))
     plt.plot(range(len(newdata)), newdata, color='green', label='Confirmed')
-    plt.scatter(range(len(newdata) - 1, len(newdata) + len(forecasts) - 1), forecasts, color='red', label='Forecasts')
+    plt.plot(range(len(newdata) - 1, len(newdata) + len(forecasts) - 1), forecasts, color='red', label='Forecasts')
     plt.title('Temperatura')
     plt.ylabel('Graus')
     plt.xlabel('Meses')
@@ -178,8 +178,8 @@ def plot_forecast(data, forecasts):
     
 
 timesteps = 12 #number of days that make up a sequence
-univariate = 8 #number of features used by the model (using conf. cases to predict conf. cases)
-multisteps = 1 #number of days to forecast – we will forecast the next 5 days
+univariate = 1 #number of features used by the model (using conf. cases to predict conf. cases)
+multisteps = 12 #number of days to forecast – we will forecast the next 5 days
 cv_splits = 3 #time series cross validator
 epochs = 25
 batch_size = 12 #7 sequences of 5 days - which corresponds to a window of 7 days in a batch
